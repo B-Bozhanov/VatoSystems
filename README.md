@@ -4,9 +4,6 @@
   <a href="https://github.com/B-Bozhanov/VatoSystems">
     <img src="VatoSystems.png" alt="VatoSystems" width="600" height="150">
   </a>
-
-<h3 align="center">VatoSystems</h3>
-
   <p align="center">
    VatoSystems is e-commerce project for security sytems and CCTV
     <br />
