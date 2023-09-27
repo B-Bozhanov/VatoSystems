@@ -1,1 +1,1 @@
-#**VatoSystems**
+#VatoSystems
