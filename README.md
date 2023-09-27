@@ -31,13 +31,13 @@
 <br />
 <div align="center">
   <a href="https://github.com/B-Bozhanov/VatoSystems">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+    <img src="logo.png" alt="Logo" width="80" height="80">
   </a>
 
 <h3 align="center">VatoSystems</h3>
 
   <p align="center">
-    project_description
+   VatoSystems is e-commerce project for security sytems and CCTV
     <br />
     <a href="https://github.com/B-Bozhanov/VatoSystems"><strong>Explore the docs »</strong></a>
     <br />
