@@ -2,7 +2,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/B-Bozhanov/VatoSystems">
-    <img src="VatoSystems.png" alt="VatoSystems" width="80" height="80">
+    <img src="VatoSystems.png" alt="VatoSystems" width="160" height="100">
   </a>
 
 <h3 align="center">VatoSystems</h3>
