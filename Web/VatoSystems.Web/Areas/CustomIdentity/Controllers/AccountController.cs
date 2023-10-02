@@ -2,17 +2,16 @@
 {
     using System;
     using System.Linq;
-    using System.Text;
-    using System.Threading;
     using System.Threading.Tasks;
 
+    using Microsoft.AspNetCore.Authentication;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Identity;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.AspNetCore.WebUtilities;
     using Microsoft.Extensions.Logging;
 
     using VatoSystems.Data.Models;
+    using VatoSystems.Services.Data.Interfaces;
     using VatoSystems.Web.Controllers;
     using VatoSystems.Web.ViewModels.Account;
 
@@ -20,27 +19,95 @@
     public class AccountController : BaseController
     {
         private readonly UserManager<ApplicationUser> userManager;
-        private readonly IUserStore<ApplicationUser> userStore;
         private readonly SignInManager<ApplicationUser> signInManager;
         private readonly ILogger<RegisterModel> logger;
+        private readonly IAccountService accountService;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
-            IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<RegisterModel> logger)
+            ILogger<RegisterModel> logger,
+            IAccountService accountService)
         {
             this.userManager = userManager;
-            this.userStore = userStore;
             this.signInManager = signInManager;
             this.logger = logger;
+            this.accountService = accountService;
+        }
+
+        public Task<IActionResult> ForgotPassword()
+        {
+            return null;
         }
 
         [AllowAnonymous]
-        [HttpGet]
-        public async Task<IActionResult> Login()
+        [Route("/Account/Login")]
+        [HttpGet("/Account/Login")]
+        public async Task<IActionResult> LoginAsync(string returnUrl = null)
         {
-            throw new Exception();
+            returnUrl ??= this.Url.Content("~/");
+            await this.HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+            return this.View(new LoginModel
+            {
+                ExternalLogins = (await this.signInManager.GetExternalAuthenticationSchemesAsync()).ToList(),
+                ReturnUrl = returnUrl,
+            });
+        }
+
+        [AllowAnonymous]
+        [Route("/Account/Login")]
+        [HttpPost]
+        public async Task<IActionResult> LoginAsync(LoginModel loginModel, string returnUrl = null)
+        {
+            returnUrl ??= this.Url.Content("~/");
+
+            if (this.ModelState.IsValid)
+            {
+                try
+                {
+                    var result = await this.accountService.LoginAsync(loginModel);
+
+                    if (result.Succeeded)
+                    {
+                        this.logger.LogInformation("User logged in.");
+                        return this.LocalRedirect(returnUrl);
+                    }
+
+                    if (result.RequiresTwoFactor)
+                    {
+                        return this.RedirectToAction(nameof(this.LoginWith2faAsync), new { ReturnUrl = returnUrl, RememberMe = loginModel.RememberMe });
+                    }
+
+                    if (result.IsLockedOut)
+                    {
+                        this.logger.LogWarning("User account locked out.");
+                        return this.RedirectToAction(nameof(this.LockoutAsync));
+                    }
+                    else
+                    {
+                        this.ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                        return this.View(loginModel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.ModelState.AddModelError(string.Empty, ex.Message);
+                }
+            }
+
+            // If we got this far, something failed, redisplay form
+            return this.View(loginModel);
+        }
+
+        public async Task<IActionResult> LoginWith2faAsync()
+        {
+            return null;
+        }
+
+        public async Task<IActionResult> LockoutAsync()
+        {
+            return null;
         }
 
         [AllowAnonymous]
@@ -59,42 +126,27 @@
         public async Task<IActionResult> RegisterAsync(RegisterModel registerModel, string returnUrl)
         {
             returnUrl ??= this.Url.Content("~/");
-            registerModel.ExternalLogins = (await this.signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
             if (this.ModelState.IsValid)
             {
-                var user = this.CreateUser();
-
-                await this.userStore.SetUserNameAsync(user, registerModel.Email, CancellationToken.None);
-                var result = await this.userManager.CreateAsync(user, registerModel.Password);
-
-                if (result.Succeeded)
+                try
                 {
-                    this.logger.LogInformation("User created a new account with password.");
+                    var result = await this.accountService.RegisterAsync(registerModel);
 
-                    var userId = await this.userManager.GetUserIdAsync(user);
-                    var code = await this.userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callbackUrl = this.Url.Page(
-                        "/Account/ConfirmEmail",
-                        pageHandler: null,
-                        values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                        protocol: this.Request.Scheme);
-
-                    if (this.userManager.Options.SignIn.RequireConfirmedAccount)
+                    if (result.Succeeded)
                     {
-                        return this.RedirectToPage("RegisterConfirmation", new { email = registerModel.Email, returnUrl = returnUrl });
+                        return this.LocalRedirect(returnUrl);
                     }
-                    else
+
+                    foreach (var error in result.Errors)
                     {
-                        await this.signInManager.SignInAsync(user, isPersistent: false);
-                        return this.(returnUrl);
+                        this.ModelState.AddModelError(string.Empty, error.Description);
                     }
                 }
-
-                foreach (var error in result.Errors)
+                catch (Exception ex)
                 {
-                    this.ModelState.AddModelError(string.Empty, error.Description);
+                    this.ModelState.AddModelError(string.Empty, ex.Message);
+                    return this.View(registerModel);
                 }
             }
 
@@ -104,43 +156,6 @@
         public async Task<IActionResult> Logout()
         {
             throw new Exception();
-        }
-
-        private ApplicationUser CreateUser()
-        {
-            try
-            {
-                return Activator.CreateInstance<ApplicationUser>();
-            }
-            catch
-            {
-                throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                    $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor, or alternatively " +
-                    $"override the register page in /Areas/Identity/Pages/Account/Register.cshtml");
-            }
-        }
-
-        private IUserEmailStore<ApplicationUser> GetEmailStore()
-        {
-            if (!this.userManager.SupportsUserEmail)
-            {
-                throw new NotSupportedException("The default UI requires a user store with email support.");
-            }
-
-            return (IUserEmailStore<ApplicationUser>)this.userStore;
-        }
-
-        private async Task LoadAsync(ApplicationUser user)
-        {
-            var userName = await this.userManager.GetUserNameAsync(user);
-            var phoneNumber = await this.userManager.GetPhoneNumberAsync(user);
-
-            //Username = userName;
-
-            //Input = new InputModel
-            //{
-            //    PhoneNumber = phoneNumber
-            //};
         }
     }
 }

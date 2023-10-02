@@ -2,13 +2,15 @@
 {
     using System.Threading.Tasks;
 
+    using Microsoft.AspNetCore.Identity;
+
     using VatoSystems.Web.ViewModels.Account;
 
     public interface IAccountService
     {
-        public Task RegisterAsync(RegisterModel registerModel, string returnUrl);
+        public Task<IdentityResult> RegisterAsync(RegisterModel registerModel);
 
-        public Task LoginAsync(LoginModel inputModel);
+        public Task<SignInResult> LoginAsync(LoginModel inputModel);
 
         public Task LogoutAsync();
     }

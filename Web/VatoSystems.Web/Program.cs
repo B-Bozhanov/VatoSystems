@@ -11,12 +11,16 @@
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Options;
+
     using VatoSystems.Data;
     using VatoSystems.Data.Common;
     using VatoSystems.Data.Common.Repositories;
     using VatoSystems.Data.Models;
     using VatoSystems.Data.Repositories;
     using VatoSystems.Data.Seeding;
+    using VatoSystems.Services.Data;
+    using VatoSystems.Services.Data.Interfaces;
     using VatoSystems.Services.Mapping;
     using VatoSystems.Web.Infrastructure.Extencions;
     using VatoSystems.Web.ViewModels;
@@ -36,7 +40,7 @@
         private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
             services.AddDbContext<VatoDbContext>(options
-                => options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+                => options.UseSqlServer(configuration.GetConnectionString("LocalConection")));
 
             services.AddDefaultIdentity<ApplicationUser>(IdentityOptionsProvider.GetIdentityOptions)
                 .AddRoles<ApplicationRole>()
@@ -46,6 +50,12 @@
                 {
                     options.CheckConsentNeeded = context => true;
                     options.MinimumSameSitePolicy = SameSiteMode.None;
+                });
+
+            services.ConfigureApplicationCookie(o =>
+                {
+                    o.LoginPath = "/Account/Login";
+                    o.ReturnUrlParameter = CookieAuthenticationDefaults.ReturnUrlParameter;
                 });
 
             services.AddControllersWithViews(options =>
@@ -61,6 +71,8 @@
 
             // Add interfaceType of service:
             services.AutoRegisterServices(new Type[] { });
+
+            services.AddScoped<IAccountService, AccountService>();
         }
 
         private static void Configure(WebApplication app)

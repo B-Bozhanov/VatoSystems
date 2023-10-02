@@ -1,24 +1,13 @@
-﻿using System.Web.Http;
-
-namespace VatoSystems.Web.Infrastructure.Attributes
+﻿namespace VatoSystems.Web.Infrastructure.Attributes
 {
+    using System.Web.Http;
+    using System.Web.Http.Controllers;
 
-    public class CustomAuthorize : AuthorizeAttribute
+    public class CustomAuthorizeAttribute : AuthorizeAttribute
     {
-        //public override void OnAuthorization(AuthorizationContext filterContext)
-        //{
-        //    base.OnAuthorization(filterContext);
-        //    if (filterContext.Result is HttpUnauthorizedResult)
-        //    {
-        //        filterContext.Result = new RedirectToRouteResult(
-        //            new System.Web.Routing.RouteValueDictionary
-        //                {
-        //                        { "langCode", filterContext.RouteData.Values[ "langCode" ] },
-        //                        { "controller", "Account" },
-        //                        { "action", "Login" },
-        //                        { "ReturnUrl", filterContext.HttpContext.Request.RawUrl }
-        //                });
-        //    }
-        //}
+        public override void OnAuthorization(HttpActionContext actionContext)
+        {
+            base.OnAuthorization(actionContext);
+        }
     }
 }
